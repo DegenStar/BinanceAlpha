@@ -65,18 +65,13 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 uv sync --locked
 ```
 
-3. 配置环境变量，创建`.env`文件：
+3. 复制`.env.example`并重命名为`.env`，配置环境变量：
 
 ```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CHAT_ID=your_telegram_chat_id
-USE_PROXY=false
-# PROXY_URL=http://127.0.0.1:7890
 LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，如：https://api.deepseek.com/v1、https://api.moonshot.ai/v1
 LLM_API_KEY=your_api_key_here
 LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
-💡 如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
 
 ### 🖥️ For MacOS / Linux / WSL
 
@@ -96,16 +91,13 @@ bash ./install.sh
 uv sync --locked
 ```
 
-3. 配置环境变量，创建`.env`文件：
+3. 复制`.env.example`并重命名为`.env`，配置环境变量：
 
 ```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CHAT_ID=your_telegram_chat_id
 LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，如：https://api.deepseek.com/v1、https://api.moonshot.ai/v1
 LLM_API_KEY=your_api_key_here
 LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
-💡 如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
 
 ### Linux 中文字体
 
@@ -204,7 +196,8 @@ command: ["uv", "run", "--locked", "python", "-u", "main.py", "--AI-needed"]
 
 ## Telegram 通知配置
 
-> 当前 Telegram 通知仅发送`--AI-needed`生成的 AI 文本建议。三张市场分析图片只保存在本地`images/`目录，不会发送到 Telegram。
+💡 如需将分析结果可自动推送至 Telegram ，须在`.env`中配置 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
+> Telegram 通知仅发送`--AI-needed`生成的 AI 文本建议。三张市场分析图片只保存在本地`images/`目录，不会发送到 Telegram。
 
 1. 在 Telegram 中打开官方机器人 [@BotFather](https://t.me/BotFather)，发送`/newbot`并按提示创建机器人，取得 Bot Token。
 2. 根据消息接收目标获取 Chat ID：
@@ -269,7 +262,7 @@ LLM_API_KEY_HEADER=api-key
 LLM_API_KEY_PREFIX=
 ```
 
-部分推理模型使用`max_completion_tokens`，可设置`LLM_MAX_TOKENS_PARAM=max_completion_tokens`。旧版`DEEPSEEK_API_URL`、`DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL`和`DEEPSEEK_API_TIMEOUT`仍兼容。原生接口不兼容 Chat Completions 的供应商需要使用其兼容端点或代理。
+部分推理模型使用`max_completion_tokens`，可设置`LLM_MAX_TOKENS_PARAM=max_completion_tokens`。原生接口不兼容 Chat Completions 的供应商需要使用其兼容端点或代理。
 
 ### AI智能投资建议
 
