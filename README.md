@@ -132,8 +132,6 @@ Docker 镜像已自动安装`fonts-noto-cjk`，无需额外配置。
 
 ### 基本命令
 
-uv 默认使用项目根目录的`.venv`。如果终端已激活其他虚拟环境，建议先运行`deactivate`，否则 uv 会提示当前`VIRTUAL_ENV`与项目环境不一致。
-
 ```bash
 # 默认流程：获取数据、生成图片并完成平台分类，不执行 AI 分析
 uv run python main.py
