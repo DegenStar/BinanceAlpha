@@ -10,8 +10,8 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - IS_DOCKER=true
-      - HTTP_PROXY=http://host.docker.internal:7890
-      - HTTPS_PROXY=http://host.docker.internal:7890
+      - USE_PROXY=${USE_PROXY:-false}
+      - PROXY_URL=${PROXY_URL:-http://host.docker.internal:7890}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always

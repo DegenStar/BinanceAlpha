@@ -13,9 +13,16 @@ DISCORD_WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK_URL', '')  # Discord webhook
 # 根据环境变量判断是否在Docker中运行
 IS_DOCKER = os.getenv('IS_DOCKER', 'false').lower() == 'true'
 
-# 根据运行环境选择代理地址
-PROXY_URL = 'http://host.docker.internal:7890' if IS_DOCKER else 'http://127.0.0.1:7890'
-USE_PROXY = True
+# 默认不启用代理；启用时可通过 .env 覆盖代理地址。
+DEFAULT_PROXY_URL = (
+    'http://host.docker.internal:7890'
+    if IS_DOCKER
+    else 'http://127.0.0.1:7890'
+)
+PROXY_URL = os.getenv('PROXY_URL') or DEFAULT_PROXY_URL
+USE_PROXY = os.getenv('USE_PROXY', 'false').strip().lower() in {
+    '1', 'true', 'yes', 'on'
+}
 
 # 文件路径配置
 DATA_DIRS = {

@@ -70,6 +70,8 @@ uv sync --locked
 ```env
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
+USE_PROXY=false
+# PROXY_URL=http://127.0.0.1:7890
 LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，如：https://api.deepseek.com/v1、https://api.moonshot.ai/v1
 LLM_API_KEY=your_api_key_here
 LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
@@ -162,7 +164,7 @@ docker-compose up -d
 
 在`config.py`文件中，您可以自定义以下配置：
 
-- **代理设置**：配置`PROXY_URL`和`USE_PROXY`实现全球稳定访问
+- **代理设置**：默认直连；需要代理时在`.env`中设置`USE_PROXY=true`和实际的`PROXY_URL`
 - **区块链平台**：在`BLOCKCHAIN_PLATFORMS`中添加或修改支持的区块链平台
 - **AI模型参数**：通过`LLM_BASE_URL`、`LLM_API_KEY`和`LLM_MODEL`切换大模型
 - **Telegram**：配置`TELEGRAM_BOT_TOKEN`和`TELEGRAM_CHAT_ID`实现消息推送
