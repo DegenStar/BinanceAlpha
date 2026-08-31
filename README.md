@@ -74,7 +74,7 @@ LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，
 LLM_API_KEY=your_api_key_here
 LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
-如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
+💡 如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
 
 ### 🖥️ For MacOS / Linux / WSL
 
@@ -103,7 +103,7 @@ LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，
 LLM_API_KEY=your_api_key_here
 LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
-如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
+💡 如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
 
 ## 使用方法
 
