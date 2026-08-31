@@ -132,12 +132,17 @@ Docker 镜像已自动安装`fonts-noto-cjk`，无需额外配置。
 
 ### 基本命令
 
+uv 默认使用项目根目录的`.venv`。如果终端已激活其他虚拟环境，建议先运行`deactivate`，否则 uv 会提示当前`VIRTUAL_ENV`与项目环境不一致。
+
 ```bash
-# 运行完整工作流（获取数据 + 生成图片 + AI分析）
+# 默认流程：获取数据、生成图片并完成平台分类，不执行 AI 分析
 uv run python main.py
 
-# 调试模式（仅生成提示词不发送API请求）
-uv run python main.py --debug-only
+# 完整流程：获取数据、生成图片、调用大模型并向 Telegram 发送文本建议
+uv run python main.py --AI-needed
+
+# AI 调试流程：生成并保存提示词，但不调用大模型或发送 Telegram 消息
+uv run python main.py --AI-needed --debug-only
 
 # 查看帮助信息
 uv run python main.py --help
@@ -152,19 +157,21 @@ uv run python main.py --help
    - 从币安API获取合约交易对（Futures Symbols）
    - 提取并缓存所有上线的Token名称
 
-2. **获取币安Alpha项目列表数据**
-   - 从CoinMarketCap获取币安Alpha项目数据
+2. **获取币安Alpha项目列表数据并生成图片**
+   - 从CoinMarketCap获取按市值排序的前200个币安Alpha项目；接口返回的总项目数可能大于200
    - 生成三类分析图片：
      - Alpha项目排名榜（按市值排序）
      - 高流动性项目（按VOL/MC比值排序）
      - 涨跌幅榜（24小时价格变化）
-   - 推送分析消息到 Telegram
+   - 图片保存在`images/`目录，当前不会发送到 Telegram
 
-3. **分类项目并生成投资建议**
+3. **分类项目并按需生成投资建议**
    - 按区块链平台分类Alpha项目
    - 过滤已上线币安的项目
-   - 并行为每个平台生成AI投资建议
-   - 保存建议报告到`advices`目录
+   - 默认命令在分类完成后结束，不执行 AI 分析
+   - 使用`--AI-needed`时，并行为每个平台生成 AI 投资建议
+   - 建议报告保存到`advices/`，并以文本消息发送到 Telegram
+   - 同时使用`--AI-needed --debug-only`时，只保存提示词，不调用模型或发送消息
 
 ### Docker部署
 
@@ -181,6 +188,12 @@ docker-compose build
 docker-compose up -d
 ```
 
+Docker 默认同样只运行数据获取、图片生成和分类流程。如需在容器中启用 AI 分析与 Telegram 文本通知，请在`docker-compose.yml`的服务配置中增加：
+
+```yaml
+command: ["uv", "run", "--locked", "python", "-u", "main.py", "--AI-needed"]
+```
+
 ## 配置选项
 
 在`config.py`文件中，您可以自定义以下配置：
@@ -192,6 +205,8 @@ docker-compose up -d
 - **数据目录**：通过`DATA_DIRS`自定义各类数据存储位置
 
 ## Telegram 通知配置
+
+> 当前 Telegram 通知仅发送`--AI-needed`生成的 AI 文本建议。三张市场分析图片只保存在本地`images/`目录，不会发送到 Telegram。
 
 1. 在 Telegram 中打开官方机器人 [@BotFather](https://t.me/BotFather)，发送`/newbot`并按提示创建机器人，取得 Bot Token。
 2. 根据消息接收目标获取 Chat ID：
@@ -212,6 +227,13 @@ uv run python -c "import asyncio; from telegram_notifier import send_message_asy
 ```
 
 收到消息即表示配置成功。完整操作步骤、群组隐私模式设置和常见错误处理请查看[创建 Telegram Bot 指南](telegram-bot-setup.md)。Bot Token 等同于机器人的控制凭证，请勿提交到 Git；项目已通过`.gitignore`排除`.env`。
+
+## 常见运行日志
+
+- **`VIRTUAL_ENV ... does not match ... .venv`**：当前激活了其他虚拟环境。运行`deactivate`后重新执行 uv 命令即可；这不是依赖安装失败。
+- **`Failed to extract font properties from ... NotoColorEmoji.ttf`**：Matplotlib 首次扫描字体时忽略了不支持的彩色 Emoji 字体，不影响中文图表。看到后续`图表字体: Noto Sans CJK SC`即表示中文字体配置成功。
+- **“获取到200个项目，总共有更多项目”**：当前请求参数限制为前200个项目，这是现有数据采集范围，不代表请求失败。
+- **“AI投资分析已禁用”**：运行命令时未指定`--AI-needed`，属于默认行为。如需 AI 分析和 Telegram 文本通知，请使用`uv run python main.py --AI-needed`。
 
 ## 数据分析能力
 
