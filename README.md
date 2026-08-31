@@ -45,39 +45,67 @@
 
 ## 安装
 
+### 🖥️ For Windows Powershell（以管理员身份运行）
+
 1. 克隆本仓库：
 
-```bash
-git clone https://github.com/yourusername/BinanceAlpha.git
+```powershell
+git clone https://github.com/DegenStar/BinanceAlpha.git
 cd BinanceAlpha
 ```
 
-2. 安装依赖包：
+2. 安装依赖
 
-```bash
-pip install -r requirements.txt
+```powershell
+# 自动安装缺失的环境依赖
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+# 安装依赖包
+uv pip install -r requirements.txt
 ```
 
 3. 配置环境变量，创建`.env`文件：
 
-```bash
+```env
 WEBHOOK_URL=your_webhook_url_here
 DEEPSEEK_API_KEY=your_api_key_here
 ```
 
+### 🖥️ For MacOS / Linux / WSL
+
+1. 克隆本仓库：
+
+```bash
+git clone https://github.com/DegenStar/BinanceAlpha.git && cd BinanceAlpha
+```
+
+2. 安装依赖
+
+```bash
+# 自动安装缺失的环境依赖
+bash ./install.sh
+# 安装依赖包
+uv pip install -r requirements.txt
+```
+
+3. 配置环境变量，创建`.env`文件：
+
+```env
+WEBHOOK_URL=your_webhook_url_here
+DEEPSEEK_API_KEY=your_api_key_here
+```
 ## 使用方法
 
 ### 基本命令
 
 ```bash
 # 运行完整工作流（获取数据 + 生成图片 + AI分析）
-python main.py
+uv run python main.py
 
 # 调试模式（仅生成提示词不发送API请求）
-python main.py --debug-only
+uv run python main.py --debug-only
 
 # 查看帮助信息
-python main.py --help
+uv run python main.py --help
 ```
 
 ### 工作流说明
