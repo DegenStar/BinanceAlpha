@@ -107,6 +107,27 @@ LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
 💡 如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
 
+### Linux 中文字体
+
+图表包含中文。程序会自动选择系统中已安装的 Noto、思源黑体、文泉驿等中文字体。若日志提示未检测到中文字体，或图表出现方框乱码，请安装 Noto CJK 字体：
+
+```bash
+# Ubuntu / Debian
+sudo apt update
+sudo apt install -y fonts-noto-cjk
+
+# 字体安装后刷新 Matplotlib 缓存
+rm -rf ~/.cache/matplotlib
+```
+
+Fedora 可运行`sudo dnf install google-noto-sans-cjk-fonts`，Arch Linux 可运行`sudo pacman -S noto-fonts-cjk`。也可以通过`.env`中的`CHART_FONT_FAMILY`指定其他已安装字体，例如：
+
+```env
+CHART_FONT_FAMILY=Noto Sans CJK SC
+```
+
+Docker 镜像已自动安装`fonts-noto-cjk`，无需额外配置。
+
 ## 使用方法
 
 ### 基本命令

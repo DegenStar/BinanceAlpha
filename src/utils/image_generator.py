@@ -6,15 +6,67 @@
 import os
 import io
 import base64
+import logging
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Callable
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')  # 使用非交互式后端
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
 import pandas as pd
 import numpy as np
 from config import DATA_DIRS
 from src.utils.binance_symbols import check_futures_listing
+
+
+logger = logging.getLogger(__name__)
+
+_CJK_FONT_CANDIDATES = (
+    'Noto Sans CJK SC',
+    'Noto Sans CJK JP',
+    'Noto Sans SC',
+    'Source Han Sans SC',
+    'WenQuanYi Micro Hei',
+    'WenQuanYi Zen Hei',
+    'Microsoft YaHei',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'SimHei',
+    'Arial Unicode MS',
+)
+
+
+def _select_chart_font(installed_fonts):
+    """从已安装字体中选择可显示中文的字体。"""
+    configured_font = os.getenv('CHART_FONT_FAMILY', '').strip()
+    candidates = (
+        (configured_font,) + _CJK_FONT_CANDIDATES
+        if configured_font
+        else _CJK_FONT_CANDIDATES
+    )
+    return next((font for font in candidates if font in installed_fonts), None)
+
+
+def _configure_chart_font():
+    """配置 Matplotlib 字体一次，避免每次绘图重复查找不存在的字体。"""
+    installed_fonts = {font.name for font in font_manager.fontManager.ttflist}
+    selected_font = _select_chart_font(installed_fonts)
+
+    if selected_font:
+        matplotlib.rcParams['font.sans-serif'] = [selected_font, 'DejaVu Sans']
+        logger.info("图表字体: %s", selected_font)
+    else:
+        matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans']
+        logger.warning(
+            "未检测到中文字体，图表中文可能无法正确显示；"
+            "Linux 建议安装 fonts-noto-cjk"
+        )
+
+    matplotlib.rcParams['axes.unicode_minus'] = False
+    return selected_font
+
+
+CHART_FONT_FAMILY = _configure_chart_font()
 
 
 def _extract_crypto_data(crypto: Dict[str, Any], include_fdv: bool = True) -> Dict[str, Any]:
@@ -266,10 +318,6 @@ def create_base_image_options(
     
     # 创建DataFrame
     df = pd.DataFrame(data)
-    
-    # 设置样式
-    plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
-    plt.rcParams['axes.unicode_minus'] = False
     
     # 根据数据量和列数调整图片尺寸
     rows = len(data)
@@ -554,4 +602,4 @@ def create_gainers_losers_image(crypto_list: List[Dict[str, Any]], date: str, ma
         filename_prefix='gainers_losers',
         header_color='#3498db',  # 蓝色主题（中性色）
         highlight_top_vol_mc=False
-    ) 
+    )

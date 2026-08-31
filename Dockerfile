@@ -15,6 +15,11 @@ ARG HTTPS_PROXY
 
 WORKDIR /app
 
+# 安装中文字体，避免 Matplotlib 图表出现乱码或字体查找警告
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
 # 先复制依赖声明以利用 Docker 构建缓存
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev
