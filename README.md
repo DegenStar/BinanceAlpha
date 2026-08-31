@@ -120,21 +120,6 @@ uv run python main.py --debug-only
 uv run python main.py --help
 ```
 
-## 使用方法
-
-### 基本命令
-
-```bash
-# 运行完整工作流（获取数据 + 生成图片 + AI分析）
-uv run python main.py
-
-# 调试模式（仅生成提示词不发送API请求）
-uv run python main.py --debug-only
-
-# 查看帮助信息
-uv run python main.py --help
-```
-
 ### 工作流说明
 
 系统运行时会依次执行以下步骤：
@@ -221,9 +206,9 @@ uv run python -c "import asyncio; from telegram_notifier import send_message_asy
 项目支持 OpenAI Chat Completions 兼容接口。只需修改 `.env`：
 
 ```env
-LLM_BASE_URL=https://api.openai.com/v1
+LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_API_KEY=your_api_key
-LLM_MODEL=gpt-4.1-mini
+LLM_MODEL=deepseek-v4-flash
 ```
 
 使用 Ollama、vLLM 等无鉴权本地服务时，`LLM_API_KEY`可留空：
