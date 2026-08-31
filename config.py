@@ -1,4 +1,4 @@
-# Webhook配置
+# 消息通知配置
 import os
 from dotenv import load_dotenv
 
@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 添加默认值和类型检查
-WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')  # 企业微信 webhook
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 DISCORD_WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK_URL', '')  # Discord webhook
 
 # 根据环境变量判断是否在Docker中运行
@@ -64,14 +65,49 @@ MARKET_SENTIMENT = {
     'binance_alpha_url': 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing',  # 币安Alpha项目列表API
 }
 
-# DeepSeek AI 配置
-DEEPSEEK_AI = {
-    'api_url': os.getenv('DEEPSEEK_API_URL', 'https://api.deepseek.com/v1/chat/completions'),
-    'model': os.getenv('DEEPSEEK_MODEL', 'deepseek-reasoner'),
-    'api_key': os.getenv('DEEPSEEK_API_KEY', ''),
-    'temperature': 0,
-    'max_tokens': 65536,
-    'top_p': 1.0,
-    'stream': False,
-    'timeout': int(os.getenv('DEEPSEEK_API_TIMEOUT', '900'))  # API请求超时时间(秒)
+def _optional_number(name, converter):
+    value = os.getenv(name)
+    return converter(value) if value not in (None, '') else None
+
+
+def _env_with_legacy(name, legacy_name, default=''):
+    if name in os.environ:
+        return os.environ[name]
+    return os.getenv(legacy_name, default)
+
+
+def _resolve_llm_api_url():
+    api_url = os.getenv('LLM_API_URL')
+    if api_url:
+        return api_url
+
+    base_url = os.getenv('LLM_BASE_URL')
+    if base_url:
+        return f"{base_url.rstrip('/')}/chat/completions"
+
+    # 兼容旧版 DeepSeek 配置。
+    return os.getenv(
+        'DEEPSEEK_API_URL',
+        'https://api.deepseek.com/v1/chat/completions',
+    )
+
+
+# 通用 OpenAI Chat Completions 兼容接口配置。
+LLM_CONFIG = {
+    'api_url': _resolve_llm_api_url(),
+    'model': _env_with_legacy('LLM_MODEL', 'DEEPSEEK_MODEL', 'deepseek-reasoner'),
+    'api_key': _env_with_legacy('LLM_API_KEY', 'DEEPSEEK_API_KEY'),
+    'api_key_header': os.getenv('LLM_API_KEY_HEADER', 'Authorization'),
+    'api_key_prefix': os.getenv('LLM_API_KEY_PREFIX', 'Bearer'),
+    'temperature': _optional_number('LLM_TEMPERATURE', float),
+    'max_tokens': _optional_number('LLM_MAX_TOKENS', int),
+    'max_tokens_param': os.getenv('LLM_MAX_TOKENS_PARAM', 'max_tokens'),
+    'top_p': _optional_number('LLM_TOP_P', float),
+    'timeout': int(
+        os.getenv('LLM_API_TIMEOUT')
+        or os.getenv('DEEPSEEK_API_TIMEOUT', '900')
+    ),
 }
+
+# 为引用旧配置名称的外部代码保留兼容别名。
+DEEPSEEK_AI = LLM_CONFIG

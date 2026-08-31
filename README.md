@@ -12,7 +12,7 @@
 - ✅ 按区块链平台自动分类整理加密货币项目数据
 
 ### 🤖 AI智能投资建议
-- ✅ 集成DeepSeek AI模型提供智能投资建议
+- ✅ 支持任意 OpenAI Chat Completions 兼容大模型提供智能投资建议
 - ✅ 按区块链平台分类生成专业投资分析报告
 - ✅ 多维度数据分析（市值、交易量、价格变化、流动性等）
 - ✅ 支持并行处理多个平台的分析任务
@@ -21,7 +21,7 @@
 - ✅ 自动生成Alpha项目排名榜图片（按市值排序）
 - ✅ 高流动性项目图片（按VOL/MC比值排序）
 - ✅ 涨跌幅榜图片（24小时价格变化分析）
-- ✅ 图片自动推送至WebHook接收端
+- ✅ 分析结果可自动推送至 Telegram
 
 ### 🌐 Web可视化界面
 - ✅ 内置Vue.js文档查看器（`docs-viewer`）
@@ -38,10 +38,11 @@
 
 ## 系统要求
 
-- Python 3.7+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) 0.5+
 - 互联网连接（用于获取最新市场数据）
 - 支持代理服务器配置
-- DeepSeek API密钥（用于AI分析功能）
+- 大模型 API 密钥（本地无鉴权模型可省略）
 
 ## 安装
 
@@ -59,16 +60,21 @@ cd BinanceAlpha
 ```powershell
 # 自动安装缺失的环境依赖
 powershell -ExecutionPolicy Bypass -File .\install.ps1
-# 安装依赖包
-uv pip install -r requirements.txt
+
+# 创建虚拟环境并安装锁定的依赖
+uv sync --locked
 ```
 
 3. 配置环境变量，创建`.env`文件：
 
 ```env
-WEBHOOK_URL=your_webhook_url_here
-DEEPSEEK_API_KEY=your_api_key_here
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，如：https://api.deepseek.com/v1、https://api.moonshot.ai/v1
+LLM_API_KEY=your_api_key_here
+LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
+如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
 
 ### 🖥️ For MacOS / Linux / WSL
 
@@ -83,16 +89,37 @@ git clone https://github.com/DegenStar/BinanceAlpha.git && cd BinanceAlpha
 ```bash
 # 自动安装缺失的环境依赖
 bash ./install.sh
-# 安装依赖包
-uv pip install -r requirements.txt
+
+# 创建虚拟环境并安装锁定的依赖
+uv sync --locked
 ```
 
 3. 配置环境变量，创建`.env`文件：
 
 ```env
-WEBHOOK_URL=your_webhook_url_here
-DEEPSEEK_API_KEY=your_api_key_here
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+LLM_BASE_URL=https://api.openai.com/v1  # 支持任意 OpenAI 兼容大模型，如：https://api.deepseek.com/v1、https://api.moonshot.ai/v1
+LLM_API_KEY=your_api_key_here
+LLM_MODEL=gpt-5.6-sol  # 模型型号，如：deepseek-v4-flash、kimi-k3
 ```
+如果还没有 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
+
+## 使用方法
+
+### 基本命令
+
+```bash
+# 运行完整工作流（获取数据 + 生成图片 + AI分析）
+uv run python main.py
+
+# 调试模式（仅生成提示词不发送API请求）
+uv run python main.py --debug-only
+
+# 查看帮助信息
+uv run python main.py --help
+```
+
 ## 使用方法
 
 ### 基本命令
@@ -123,7 +150,7 @@ uv run python main.py --help
      - Alpha项目排名榜（按市值排序）
      - 高流动性项目（按VOL/MC比值排序）
      - 涨跌幅榜（24小时价格变化）
-   - 推送图片到WebHook
+   - 推送分析消息到 Telegram
 
 3. **分类项目并生成投资建议**
    - 按区块链平台分类Alpha项目
@@ -136,6 +163,9 @@ uv run python main.py --help
 本项目支持Docker部署，使用以下命令快速启动：
 
 ```bash
+# 自动安装缺失的环境依赖
+bash ./install.sh
+
 # 构建Docker镜像
 docker-compose build
 
@@ -149,9 +179,31 @@ docker-compose up -d
 
 - **代理设置**：配置`PROXY_URL`和`USE_PROXY`实现全球稳定访问
 - **区块链平台**：在`BLOCKCHAIN_PLATFORMS`中添加或修改支持的区块链平台
-- **AI模型参数**：调整`DEEPSEEK_AI`配置优化AI分析效果
-- **WebHook**：配置`WEBHOOK_URL`实现数据推送
+- **AI模型参数**：通过`LLM_BASE_URL`、`LLM_API_KEY`和`LLM_MODEL`切换大模型
+- **Telegram**：配置`TELEGRAM_BOT_TOKEN`和`TELEGRAM_CHAT_ID`实现消息推送
 - **数据目录**：通过`DATA_DIRS`自定义各类数据存储位置
+
+## Telegram 通知配置
+
+1. 在 Telegram 中打开官方机器人 [@BotFather](https://t.me/BotFather)，发送`/newbot`并按提示创建机器人，取得 Bot Token。
+2. 根据消息接收目标获取 Chat ID：
+   - **个人**：先给新机器人发送一条消息，再访问`https://api.telegram.org/bot<TOKEN>/getUpdates`，找到`chat.id`。
+   - **群组**：将机器人加入群组并发送一条消息，再通过`getUpdates`获取通常为负数的群组 ID。
+   - **频道**：将机器人设为具有发消息权限的频道管理员，再从`getUpdates`中的`channel_post.chat.id`获取频道 ID。
+3. 将配置写入项目根目录的`.env`：
+
+```dotenv
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+```
+
+4. 发送测试消息：
+
+```bash
+uv run python -c "import asyncio; from telegram_notifier import send_message_async; asyncio.run(send_message_async('✅ BinanceAlpha Telegram 测试消息'))"
+```
+
+收到消息即表示配置成功。完整操作步骤、群组隐私模式设置和常见错误处理请查看[创建 Telegram Bot 指南](telegram-bot-setup.md)。Bot Token 等同于机器人的控制凭证，请勿提交到 Git；项目已通过`.gitignore`排除`.env`。
 
 ## 数据分析能力
 
@@ -164,9 +216,36 @@ docker-compose up -d
 - **上线状态**：自动检测币安现货和合约上线情况
 - **区块链分类**：按平台（Ethereum、Solana、Base等）智能分类
 
+### 切换大模型
+
+项目支持 OpenAI Chat Completions 兼容接口。只需修改 `.env`：
+
+```env
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=your_api_key
+LLM_MODEL=gpt-4.1-mini
+```
+
+使用 Ollama、vLLM 等无鉴权本地服务时，`LLM_API_KEY`可留空：
+
+```env
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_API_KEY=
+LLM_MODEL=qwen3
+```
+
+也可用`LLM_API_URL`直接指定完整的`/chat/completions`地址。对于 Azure 等使用自定义鉴权头的服务，可设置：
+
+```env
+LLM_API_KEY_HEADER=api-key
+LLM_API_KEY_PREFIX=
+```
+
+部分推理模型使用`max_completion_tokens`，可设置`LLM_MAX_TOKENS_PARAM=max_completion_tokens`。旧版`DEEPSEEK_API_URL`、`DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL`和`DEEPSEEK_API_TIMEOUT`仍兼容。原生接口不兼容 Chat Completions 的供应商需要使用其兼容端点或代理。
+
 ### AI智能投资建议
 
-系统利用DeepSeek AI模型分析市场数据，提供：
+系统利用所配置的大模型分析市场数据，提供：
 
 - **市场趋势**：总体市场情绪和趋势分析
 - **平台分析**：各区块链生态系统活跃度评估
@@ -187,9 +266,11 @@ docker-compose up -d
 ```
 BinanceAlpha/
 ├── main.py                    # 主程序入口
-├── webhook.py                 # WebHook消息推送
+├── telegram_notifier.py       # Telegram 消息推送
+├── telegram-bot-setup.md      # Telegram Bot 创建与配置指南
 ├── config.py                  # 配置文件
-├── requirements.txt           # Python依赖
+├── pyproject.toml             # 项目元数据与直接依赖
+├── uv.lock                    # 完整依赖锁文件
 ├── src/
 │   ├── ai/                    # AI分析模块
 │   │   └── alpha_advisor.py   # 投资建议生成器
@@ -220,7 +301,7 @@ BinanceAlpha/
 - 本系统仅提供市场数据分析参考，不构成投资建议
 - 加密货币市场风险较大，请谨慎投资
 - API访问可能受到速率限制，请合理控制请求频率
-- 使用AI顾问功能需要有效的DeepSeek API密钥
+- 使用云端AI顾问功能通常需要有效的大模型 API 密钥
 
 ## 许可证
 

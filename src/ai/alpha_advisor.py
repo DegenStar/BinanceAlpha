@@ -5,11 +5,10 @@ import time
 import random
 import asyncio
 from typing import Dict, Any, List, Optional, Tuple
-import requests
 import aiohttp
 from datetime import datetime
 
-from config import DEEPSEEK_AI, DATA_DIRS, BLOCKCHAIN_PLATFORMS, BLOCK_TOKEN_LIST
+from config import LLM_CONFIG, DATA_DIRS, BLOCKCHAIN_PLATFORMS, BLOCK_TOKEN_LIST
 from src.utils.crypto_formatter import format_project_detailed, extract_basic_info, save_crypto_data
 
 # 设置日志
@@ -21,12 +20,81 @@ class AlphaAdvisor:
     
     def __init__(self):
         """初始化币安Alpha项目投资顾问"""
-        self.api_url = DEEPSEEK_AI.get('api_url')
-        self.model = DEEPSEEK_AI.get('model')
-        self.api_key = DEEPSEEK_AI.get('api_key')
+        self.api_url = LLM_CONFIG.get('api_url')
+        self.model = LLM_CONFIG.get('model')
+        self.api_key = LLM_CONFIG.get('api_key')
         
         if not self.api_key:
-            logger.warning("未设置DEEPSEEK_API_KEY环境变量")
+            logger.info("未设置 LLM_API_KEY，将以无鉴权模式请求大模型接口")
+
+    def _build_request_headers(self) -> Dict[str, str]:
+        """构建兼容 Bearer、自定义请求头及无鉴权服务的请求头。"""
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        if self.api_key:
+            header_name = LLM_CONFIG.get('api_key_header') or 'Authorization'
+            prefix = (LLM_CONFIG.get('api_key_prefix') or '').strip()
+            headers[header_name] = (
+                f"{prefix} {self.api_key}" if prefix else self.api_key
+            )
+        return headers
+
+    def _build_request_payload(self, prompt: str) -> Dict[str, Any]:
+        """仅添加已配置的可选参数，避免不同模型间参数不兼容。"""
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+
+        optional_parameters = {
+            "temperature": LLM_CONFIG.get('temperature'),
+            "top_p": LLM_CONFIG.get('top_p'),
+        }
+        for name, value in optional_parameters.items():
+            if value is not None:
+                payload[name] = value
+
+        max_tokens = LLM_CONFIG.get('max_tokens')
+        if max_tokens is not None:
+            parameter_name = LLM_CONFIG.get('max_tokens_param') or 'max_tokens'
+            payload[parameter_name] = max_tokens
+
+        return payload
+
+    @staticmethod
+    def _extract_response_content(result: Dict[str, Any]) -> str:
+        """提取常见 OpenAI 兼容响应中的文本内容。"""
+        choices = result.get("choices") or []
+        if not choices:
+            return ""
+
+        choice = choices[0] or {}
+        message = choice.get("message") or {}
+        content = message.get("content")
+
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            text_parts = []
+            for block in content:
+                if isinstance(block, str):
+                    text_parts.append(block)
+                elif isinstance(block, dict):
+                    text = block.get("text") or block.get("content")
+                    if isinstance(text, str):
+                        text_parts.append(text)
+            return "".join(text_parts)
+
+        # 兼容部分推理模型及旧 completions 风格响应。
+        reasoning_content = message.get("reasoning_content")
+        if isinstance(reasoning_content, str):
+            return reasoning_content
+        text = choice.get("text")
+        return text if isinstance(text, str) else ""
     
     def _format_project_data(self, crypto: Dict[str, Any]) -> str:
         """格式化单个项目数据为文本
@@ -232,8 +300,11 @@ class AlphaAdvisor:
         Returns:
             生成的投资建议文本，如果生成失败则返回None
         """
-        if not self.api_key and not dry_run:
-            logger.error("未设置DEEPSEEK_API_KEY，无法获取AI建议")
+        if not self.api_url and not dry_run:
+            logger.error("未设置 LLM_API_URL 或 LLM_BASE_URL，无法获取 AI 建议")
+            return None
+        if not self.model and not dry_run:
+            logger.error("未设置 LLM_MODEL，无法获取 AI 建议")
             return None
         
         # 准备提示词
@@ -256,26 +327,9 @@ class AlphaAdvisor:
             return f"## 调试模式 - {platform or '通用'}平台提示词生成\n\n提示词已保存到: {prompt_file}\n\n此为调试模式，未发送API请求。"
         
         # 准备API请求参数 - 优化超时设置
-        base_timeout = DEEPSEEK_AI.get('timeout', 600)
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-        
-        payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": DEEPSEEK_AI.get('temperature', 0),
-            "max_tokens": DEEPSEEK_AI.get('max_tokens', 32000),
-            "top_p": DEEPSEEK_AI.get('top_p', 1.0),
-            "stream": DEEPSEEK_AI.get('stream', False)
-        }
+        base_timeout = LLM_CONFIG.get('timeout', 600)
+        headers = self._build_request_headers()
+        payload = self._build_request_payload(prompt)
         
         # 尝试请求API
         for attempt in range(max_retries):
@@ -302,10 +356,9 @@ class AlphaAdvisor:
                         
                         if response.status == 200:
                             logger.info(f"API请求完成，耗时: {request_time:.2f}秒")
-                            result = await response.json()
+                            result = await response.json(content_type=None)
                             
-                            # 简单获取响应内容
-                            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            content = self._extract_response_content(result)
                             
                             # 记录使用统计
                             usage = result.get("usage", {})

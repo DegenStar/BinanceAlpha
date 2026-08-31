@@ -1,9 +1,13 @@
-# 使用自定义私有Docker镜像仓库
-# FROM docker.dadunode.com/python:3.9-slim
-FROM python:3.9-slim
+FROM ghcr.io/astral-sh/uv:0.11.6 AS uv
+FROM python:3.12-slim
+
+COPY --from=uv /uv /uvx /bin/
 
 # 设置环境变量，禁用Python的输出缓冲
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv
 
 # 设置构建时的代理环境变量
 ARG HTTP_PROXY
@@ -11,18 +15,9 @@ ARG HTTPS_PROXY
 
 WORKDIR /app
 
-# 配置pip镜像源
-# RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-#     && pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn \
-#     && pip config set global.timeout 120
-# 配置pip使用阿里云镜像源
-RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
-    && pip config set global.trusted-host mirrors.aliyun.com \
-    && pip config set global.timeout 120
-
-# 安装依赖
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+# 先复制依赖声明以利用 Docker 构建缓存
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev
 
 # 复制程序文件
 COPY . .
@@ -32,4 +27,4 @@ ENV HTTP_PROXY=${HTTP_PROXY:-""}
 ENV HTTPS_PROXY=${HTTPS_PROXY:-""}
 
 # 运行程序
-CMD ["python", "-u", "main.py"] 
+CMD ["uv", "run", "--locked", "python", "-u", "main.py"]

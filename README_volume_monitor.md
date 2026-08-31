@@ -138,11 +138,11 @@ class ClassifiedSignal:
 
 ```bash
 # 运行监控
-python3 src/utils/volume_monitor.py
+uv run python src/utils/volume_monitor.py
 
 # 调试模式（不发送消息）
-python3 src/utils/volume_monitor.py --debug
+uv run python src/utils/volume_monitor.py --debug
 
 # 自定义阈值
-python3 src/utils/volume_monitor.py --threshold 60
+uv run python src/utils/volume_monitor.py --threshold 60
 ```

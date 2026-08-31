@@ -13,6 +13,7 @@ data/
 prompts/
 debug_logs/
 venv/
+.venv/
 
 # docs-viewer
 docs-viewer/public/advices/
