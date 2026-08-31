@@ -407,7 +407,15 @@ def determine_platforms_to_process(platforms):
         
     return platforms_to_process
 
-async def process_platform_advice(advisor, platform_data, max_retries, retry_delay, debug_only, platform):
+async def process_platform_advice(
+    advisor,
+    platform_data,
+    max_retries,
+    retry_delay,
+    debug_only,
+    platform,
+    send_telegram=False,
+):
     """处理单个平台的投资建议
     
     Args:
@@ -417,6 +425,7 @@ async def process_platform_advice(advisor, platform_data, max_retries, retry_del
         retry_delay: 重试延迟
         debug_only: 是否仅调试
         platform: 平台名称
+        send_telegram: 是否将建议推送到 Telegram
         
     Returns:
         Tuple[str, str, bool]: 平台名称、投资建议、是否成功
@@ -433,9 +442,11 @@ async def process_platform_advice(advisor, platform_data, max_retries, retry_del
     )
     
     if advice:
-        # 发送建议
-        if not debug_only:
-            await send_message_async(advice)
+        # Telegram 默认不推送，仅在命令行显式启用时发送。
+        if send_telegram and not debug_only:
+            sent = await send_message_async(advice)
+            if not sent:
+                logger.warning(f"{platform}平台建议已生成，但 Telegram 推送失败")
         
         # 保存建议到文件
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -553,12 +564,17 @@ async def prepare_platform_data(alpha_data=None, listed_tokens=None):
     }
 
 
-async def generate_investment_advice(prepared_data, debug_only=False):
+async def generate_investment_advice(
+    prepared_data,
+    debug_only=False,
+    send_telegram=False,
+):
     """生成AI投资建议（AI调用层）
     
     Args:
         prepared_data: 由prepare_platform_data返回的准备好的数据
         debug_only: 是否仅调试模式（只生成提示词不发送API请求）
+        send_telegram: 是否将生成的建议推送到 Telegram
         
     Returns:
         bool: 操作是否成功
@@ -600,12 +616,13 @@ async def generate_investment_advice(prepared_data, debug_only=False):
     tasks = []
     for platform, platform_data in platform_data_list:
         task = process_platform_advice(
-            advisor, 
-            platform_data, 
-            max_retries, 
-            retry_delay, 
-            debug_only, 
-            platform
+            advisor,
+            platform_data,
+            max_retries,
+            retry_delay,
+            debug_only,
+            platform,
+            send_telegram=send_telegram,
         )
         tasks.append(task)
     
@@ -640,36 +657,51 @@ async def generate_investment_advice(prepared_data, debug_only=False):
     return len(results) > 0
 
 
-async def get_alpha_investment_advice(prepared_data=None, debug_only=False):
+async def get_alpha_investment_advice(
+    prepared_data=None,
+    debug_only=False,
+    send_telegram=False,
+):
     """获取基于当天币安Alpha数据的AI投资建议，按不同区块链平台分类
     
     Args:
         prepared_data: 准备好的数据，如果为None则重新获取
         debug_only: 是否仅调试模式（只生成提示词不发送API请求）
+        send_telegram: 是否将生成的建议推送到 Telegram
         
     Returns:
         bool: 操作是否成功
     """
     print("=== 币安Alpha投资建议 ===\n")
     
-    return await generate_investment_advice(prepared_data, debug_only)
+    return await generate_investment_advice(
+        prepared_data,
+        debug_only,
+        send_telegram=send_telegram,
+    )
 
 
-async def run_workflow(debug_only=False, AI_needed=True, volume_monitor=True):
+async def run_workflow(
+    debug_only=False,
+    AI_needed=True,
+    volume_monitor=True,
+    send_telegram=False,
+):
     """运行完整工作流：图片生成 + AI投资分析
     
     Args:
         debug_only: 是否仅调试模式（不发送消息）
         AI_needed: 是否需要AI投资分析
         volume_monitor: 是否启用交易量监控（默认开启）
+        send_telegram: 是否将AI建议推送到 Telegram（默认关闭）
     """
     try:
         # 步骤1: 获取并更新Binance交易对列表
         print("步骤1: 获取并更新Binance交易对列表...\n")
         listed_tokens = await get_binance_tokens()
         
-        # 步骤2: 获取币安Alpha项目列表数据并推送图片
-        print("步骤2.1: 获取币安Alpha项目列表数据并推送图片...\n")
+        # 步骤2: 获取币安Alpha项目列表数据并生成图片
+        print("步骤2.1: 获取币安Alpha项目列表数据并生成图片...\n")
         alpha_data = await get_binance_alpha_list(
             listed_tokens=listed_tokens, 
             debug_only=debug_only, 
@@ -694,8 +726,9 @@ async def run_workflow(debug_only=False, AI_needed=True, volume_monitor=True):
         
         # 按区块链平台获取AI投资建议
         await get_alpha_investment_advice(
-            prepared_data, 
+            prepared_data,
             debug_only=debug_only,
+            send_telegram=send_telegram,
         )
         
         # 步骤4: 清理过期历史数据
@@ -722,13 +755,26 @@ async def main():
     
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="Crypto Monitor - 币安Alpha项目分析工具")
-    parser.add_argument("--debug-only", action="store_true", 
-                       help="启用调试模式，仅获取数据推送图片，不进行AI分析")
+    parser.add_argument(
+        "--debug-only",
+        action="store_true",
+        help="AI调试模式：仅生成提示词，不调用模型或发送消息（需同时启用 --AI-needed）",
+    )
     parser.add_argument("--AI-needed", action="store_true", 
                        help="启用AI投资分析")
+    parser.add_argument(
+        "--send-telegram",
+        action="store_true",
+        help="将AI投资建议推送到 Telegram（默认不推送，需同时启用 --AI-needed）",
+    )
     parser.add_argument("--no-volume-monitor", action="store_true",
                        help="禁用交易量监控（默认开启）")
     args = parser.parse_args()
+
+    if args.send_telegram and not args.AI_needed:
+        parser.error("--send-telegram 需要与 --AI-needed 同时使用")
+    if args.send_telegram and args.debug_only:
+        parser.error("--send-telegram 不能与 --debug-only 同时使用")
     
     workflow_start_time = time.time()
 
@@ -736,7 +782,8 @@ async def main():
     await run_workflow(
         debug_only=args.debug_only, 
         AI_needed=args.AI_needed,
-        volume_monitor=not args.no_volume_monitor
+        volume_monitor=not args.no_volume_monitor,
+        send_telegram=args.send_telegram,
     )
 
     total_time = time.time() - workflow_start_time

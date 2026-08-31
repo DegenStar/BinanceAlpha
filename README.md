@@ -128,8 +128,11 @@ Docker 镜像已自动安装`fonts-noto-cjk`，无需额外配置。
 # 默认流程：获取数据、生成图片并完成平台分类，不执行 AI 分析
 uv run python main.py
 
-# 完整流程：获取数据、生成图片、调用大模型并向 Telegram 发送文本建议
+# AI 流程：调用大模型并保存建议，默认不推送 Telegram
 uv run python main.py --AI-needed
+
+# AI + Telegram：生成、保存并推送文本建议
+uv run python main.py --AI-needed --send-telegram
 
 # AI 调试流程：生成并保存提示词，但不调用大模型或发送 Telegram 消息
 uv run python main.py --AI-needed --debug-only
@@ -160,7 +163,8 @@ uv run python main.py --help
    - 过滤已上线币安的项目
    - 默认命令在分类完成后结束，不执行 AI 分析
    - 使用`--AI-needed`时，并行为每个平台生成 AI 投资建议
-   - 建议报告保存到`advices/`，并以文本消息发送到 Telegram
+   - 建议报告始终保存到`advices/`，默认不推送 Telegram
+   - 同时使用`--AI-needed --send-telegram`时，才会将文本建议推送到 Telegram
    - 同时使用`--AI-needed --debug-only`时，只保存提示词，不调用模型或发送消息
 
 ### Docker部署
@@ -181,7 +185,7 @@ docker-compose up -d
 Docker 默认同样只运行数据获取、图片生成和分类流程。如需在容器中启用 AI 分析与 Telegram 文本通知，请在`docker-compose.yml`的服务配置中增加：
 
 ```yaml
-command: ["uv", "run", "--locked", "python", "-u", "main.py", "--AI-needed"]
+command: ["uv", "run", "--locked", "python", "-u", "main.py", "--AI-needed", "--send-telegram"]
 ```
 
 ## 配置选项
@@ -197,7 +201,7 @@ command: ["uv", "run", "--locked", "python", "-u", "main.py", "--AI-needed"]
 ## Telegram 通知配置
 
 💡 如需将分析结果可自动推送至 Telegram ，须在`.env`中配置 Telegram Bot Token 或 Chat ID，请参阅[创建 Telegram Bot 指南](telegram-bot-setup.md)。
-> Telegram 通知仅发送`--AI-needed`生成的 AI 文本建议。三张市场分析图片只保存在本地`images/`目录，不会发送到 Telegram。
+> Telegram 默认不推送。只有同时使用`--AI-needed --send-telegram`时，才会发送 AI 文本建议。三张市场分析图片只保存在本地`images/`目录，不会发送到 Telegram。
 
 1. 在 Telegram 中打开官方机器人 [@BotFather](https://t.me/BotFather)，发送`/newbot`并按提示创建机器人，取得 Bot Token。
 2. 根据消息接收目标获取 Chat ID：
@@ -224,7 +228,7 @@ uv run python -c "import asyncio; from telegram_notifier import send_message_asy
 - **`VIRTUAL_ENV ... does not match ... .venv`**：当前激活了其他虚拟环境。运行`deactivate`后重新执行 uv 命令即可；这不是依赖安装失败。
 - **`Failed to extract font properties from ... NotoColorEmoji.ttf`**：Matplotlib 首次扫描字体时忽略了不支持的彩色 Emoji 字体，不影响中文图表。看到后续`图表字体: Noto Sans CJK SC`即表示中文字体配置成功。
 - **“获取到200个项目，总共有更多项目”**：当前请求参数限制为前200个项目，这是现有数据采集范围，不代表请求失败。
-- **“AI投资分析已禁用”**：运行命令时未指定`--AI-needed`，属于默认行为。如需 AI 分析和 Telegram 文本通知，请使用`uv run python main.py --AI-needed`。
+- **“AI投资分析已禁用”**：运行命令时未指定`--AI-needed`，属于默认行为。仅生成 AI 建议请使用`uv run python main.py --AI-needed`；同时推送 Telegram 请再添加`--send-telegram`。
 
 ## 数据分析能力
 

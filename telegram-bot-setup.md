@@ -77,6 +77,12 @@ uv run python -c "import asyncio; from telegram_notifier import send_message_asy
 
 终端显示`Telegram 消息发送成功!`且 Telegram 收到消息，即表示配置成功。
 
+正常运行项目时 Telegram 默认不推送；需要生成 AI 建议并推送时，使用：
+
+```bash
+uv run python main.py --AI-needed --send-telegram
+```
+
 ## 常见问题
 
 - **`Unauthorized` / 401**：Bot Token 错误或已失效，检查是否复制完整。
